@@ -1,0 +1,12 @@
+{
+    "name": "scaleplan/daemon",
+    "description": "Daemonize PHP operations",
+    "autoload": {
+        "psr-4": {
+            "Scaleplan\\Daemon\\": "src/"
+        }
+    },
+    "require": {
+        "php": ">=7.0"
+    }
+}
