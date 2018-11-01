@@ -1,0 +1,33 @@
+#!/usr/bin/env php
+<?php
+
+require_once $_SERVER['DOCUMENT_ROOT'] . 'vendor/autoload.php';
+
+use Scaleplan\Daemon\Exceptions\DaemonOperationNotSupportedException;
+use Scaleplan\Console\Exceptions\CommandNameIsEmptyException;
+use Scaleplan\Daemon\Daemon;
+use Monolog\Logger;
+use Scaleplan\Monit\Monit;
+
+try {
+    if (!($operation = $argv[1] ?? null)) {
+        throw new DaemonOperationNotSupportedException();
+    }
+
+    if (!($commandName = $argv[2] ?? null)) {
+        throw new CommandNameIsEmptyException();
+    }
+
+    unset($argv[0], $argv[1], $argv[2]);
+
+    $logger = new Logger($commandName);
+    /** @var \Scaleplan\Daemon\MonitInterface $monit */
+    $monit = new Monit($commandName);
+    $daemon = new Daemon($commandName, $logger, $monit);
+
+    $daemon->setStartArgs(array_values($argv));
+
+    $daemon->exec($operation);
+} catch (Scaleplan\Console\Exceptions\AbstractException $e) {
+    echo $e->getMessage();
+}
