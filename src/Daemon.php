@@ -87,7 +87,8 @@ class Daemon
      * @throws \Scaleplan\Console\Exceptions\CommandClassNotFoundException
      * @throws \Scaleplan\Console\Exceptions\CommandClassNotImplementsCommandInterfaceException
      * @throws \Scaleplan\Console\Exceptions\CommandClassNotInstantiableException
-     * @throws \Scaleplan\Console\Exceptions\CommandNameIsEmptyException
+     * @throws \Scaleplan\Console\Exceptions\CommandException
+     * @throws \Scaleplan\Console\Exceptions\InvalidCommandSignatureException
      */
     public function start(array $args = null) : void
     {
@@ -122,7 +123,8 @@ class Daemon
      * @throws \Scaleplan\Console\Exceptions\CommandClassNotFoundException
      * @throws \Scaleplan\Console\Exceptions\CommandClassNotImplementsCommandInterfaceException
      * @throws \Scaleplan\Console\Exceptions\CommandClassNotInstantiableException
-     * @throws \Scaleplan\Console\Exceptions\CommandNameIsEmptyException
+     * @throws \Scaleplan\Console\Exceptions\CommandException
+     * @throws \Scaleplan\Console\Exceptions\InvalidCommandSignatureException
      */
     public function restart() : void
     {
@@ -156,7 +158,8 @@ class Daemon
      * @throws \Scaleplan\Console\Exceptions\CommandClassNotFoundException
      * @throws \Scaleplan\Console\Exceptions\CommandClassNotImplementsCommandInterfaceException
      * @throws \Scaleplan\Console\Exceptions\CommandClassNotInstantiableException
-     * @throws \Scaleplan\Console\Exceptions\CommandNameIsEmptyException
+     * @throws \Scaleplan\Console\Exceptions\CommandException
+     * @throws \Scaleplan\Console\Exceptions\InvalidCommandSignatureException
      */
     public function exec(string $operation) : void
     {
