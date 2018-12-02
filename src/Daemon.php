@@ -4,7 +4,9 @@ namespace Scaleplan\Daemon;
 
 use Psr\Log\LoggerInterface;
 use Scaleplan\Console\CommandFabric;
+use Scaleplan\Console\CommandInterface;
 use Scaleplan\Daemon\Exceptions\DaemonOperationNotSupportedException;
+use function Scaleplan\Helpers\getenv;
 
 /**
  * Class Daemon
@@ -102,12 +104,16 @@ class Daemon
         while (true) {
             try {
                 $command->run();
+                usleep($command::DAEMON_TIMEOUT ?? getenv('DAEMON_TIMEOUT') ?? CommandInterface::DAEMON_TIMEOUT);
             } catch (\Throwable $e) {
                 $this->logger->error($e->getMessage());
             }
         }
     }
 
+    /**
+     * Stop daemon process
+     */
     public function stop() : void
     {
         if ($this->withMonit) {
