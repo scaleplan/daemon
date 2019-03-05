@@ -8,6 +8,8 @@ use Scaleplan\Console\CommandInterface;
 use Scaleplan\Daemon\Exceptions\DaemonOperationNotSupportedException;
 use function Scaleplan\Helpers\getenv;
 
+
+
 /**
  * Class Daemon
  *
@@ -15,9 +17,18 @@ use function Scaleplan\Helpers\getenv;
  */
 class Daemon
 {
-    const OPERATION_START = 'start';
-    const OPERATION_RESTART = 'restart';
-    const OPERATION_STOP = 'stop';
+    public const OPERATION_START = 'start';
+    public const OPERATION_RESTART = 'restart';
+    public const OPERATION_STOP = 'stop';
+
+    public const STOP_SIGNALS = [
+        SIGTERM,
+        SIGINT,
+        SIGQUIT,
+        SIGKILL,
+        SIGALRM,
+        SIGABRT,
+    ];
 
     /**
      * @var string
@@ -45,6 +56,25 @@ class Daemon
     protected $withMonit = false;
 
     /**
+     * Stop signal handler
+     */
+    protected function stopSignalHandler() : void
+    {
+        $this->logger->info("Daemon {$this->commandName} was stopped.");
+        exit(0);
+    }
+
+    /**
+     * Stop signal listening initialization
+     */
+    protected function stopSignalHandlerInit() : void
+    {
+        foreach (static::STOP_SIGNALS as $signal) {
+            pcntl_signal($signal, [$this, 'stopSignalHandler']);
+        }
+    }
+
+    /**
      * Daemon constructor.
      *
      * @param string $commandName
@@ -59,6 +89,9 @@ class Daemon
         if ($monit) {
             $this->withMonit = true;
         }
+
+        pcntl_async_signals(false);
+        $this->stopSignalHandlerInit();
     }
 
     /**
@@ -104,6 +137,7 @@ class Daemon
         while (true) {
             try {
                 $command->run();
+                pcntl_signal_dispatch();
                 usleep($command::DAEMON_TIMEOUT ?? getenv('DAEMON_TIMEOUT') ?? CommandInterface::DAEMON_TIMEOUT);
             } catch (\Throwable $e) {
                 $this->logger->error($e->getMessage());
@@ -121,8 +155,8 @@ class Daemon
         }
 
         $processName = escapeshellarg($this->commandName);
-        shell_exec("pkill -9 \"$processName\"");
-        $this->logger->info("Daemon {$this->commandName} was stopped");
+        shell_exec("pkill \"$processName\"");
+        $this->logger->info("Sending stop signal to daemon {$this->commandName}...");
     }
 
     /**
@@ -136,8 +170,8 @@ class Daemon
     {
         $oldWithMonit = $this->withMonit;
         $this->withMonit = false;
-        $this->start();
         $this->stop();
+        $this->start();
         $this->withMonit = $oldWithMonit;
     }
 
