@@ -6,7 +6,7 @@ use Psr\Log\LoggerInterface;
 use Scaleplan\Console\CommandFabric;
 use Scaleplan\Console\CommandInterface;
 use Scaleplan\Daemon\Exceptions\DaemonOperationNotSupportedException;
-use function Scaleplan\Helpers\getenv;
+use function Scaleplan\Helpers\get_env;
 
 /**
  * Class Daemon
@@ -15,9 +15,9 @@ use function Scaleplan\Helpers\getenv;
  */
 class Daemon
 {
-    const OPERATION_START = 'start';
-    const OPERATION_RESTART = 'restart';
-    const OPERATION_STOP = 'stop';
+    public const OPERATION_START = 'start';
+    public const OPERATION_RESTART = 'restart';
+    public const OPERATION_STOP = 'stop';
 
     /**
      * @var string
@@ -104,7 +104,7 @@ class Daemon
         while (true) {
             try {
                 $command->run();
-                usleep($command::DAEMON_TIMEOUT ?? getenv('DAEMON_TIMEOUT') ?? CommandInterface::DAEMON_TIMEOUT);
+                usleep($command::DAEMON_TIMEOUT ?? get_env('DAEMON_TIMEOUT') ?? CommandInterface::DAEMON_TIMEOUT);
             } catch (\Throwable $e) {
                 $this->logger->error($e->getMessage());
             }

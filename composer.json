@@ -8,6 +8,7 @@
     },
     "require": {
         "php": ">=7.0",
+        "ext-pcntl": "*",
         "psr/log": "^1.0.1",
         "scaleplan/console": "dev-master"
     }
