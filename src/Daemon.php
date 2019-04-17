@@ -3,6 +3,7 @@
 namespace Scaleplan\Daemon;
 
 use Psr\Log\LoggerInterface;
+use Scaleplan\Console\AbstractCommand;
 use Scaleplan\Console\CommandFabric;
 use Scaleplan\Console\CommandInterface;
 use Scaleplan\Daemon\Exceptions\DaemonOperationNotSupportedException;
@@ -135,9 +136,11 @@ class Daemon
         while (true) {
             try {
                 $command->run();
-                usleep($command::DAEMON_TIMEOUT ?? get_env('DAEMON_TIMEOUT') ?? CommandInterface::DAEMON_TIMEOUT);
+                $timeout = \constant("$command::DAEMON_TIMEOUT")
+                    ?? get_env('DAEMON_TIMEOUT')
+                    ?? AbstractCommand::DAEMON_TIMEOUT;
                 pcntl_signal_dispatch();
-                usleep($command::DAEMON_TIMEOUT ?? getenv('DAEMON_TIMEOUT') ?? CommandInterface::DAEMON_TIMEOUT);
+                usleep($timeout);
             } catch (\Throwable $e) {
                 $this->logger->error($e->getMessage());
             }
