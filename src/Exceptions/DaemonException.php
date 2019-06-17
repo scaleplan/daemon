@@ -10,6 +10,7 @@ namespace Scaleplan\Daemon\Exceptions;
 class DaemonException extends \Exception
 {
     public const MESSAGE = 'Daemon error.';
+    public const CODE = 406;
 
     /**
      * DaemonException constructor.
@@ -20,6 +21,6 @@ class DaemonException extends \Exception
      */
     public function __construct(string $message = '', int $code = 0, \Throwable $previous = null)
     {
-        parent::__construct($message ?: static::MESSAGE, $code, $previous);
+        parent::__construct($message ?: static::MESSAGE, $code ?: static::CODE, $previous);
     }
 }
