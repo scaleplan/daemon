@@ -3,11 +3,14 @@
 namespace Scaleplan\Daemon;
 
 use Psr\Log\LoggerInterface;
-use Scaleplan\Console\AbstractCommand;
 use Scaleplan\Console\CommandFabric;
 use Scaleplan\Console\CommandInterface;
+use Scaleplan\Daemon\Exceptions\CriticalException;
 use Scaleplan\Daemon\Exceptions\DaemonOperationNotSupportedException;
-use function Scaleplan\Helpers\get_env;
+use Scaleplan\Daemon\Exceptions\ErrorException;
+use Scaleplan\Daemon\Hooks\CriticalErrorEvent;
+use Scaleplan\Daemon\Hooks\ErrorEvent;
+use function Scaleplan\Event\dispatch;
 
 /**
  * Class Daemon
@@ -16,9 +19,9 @@ use function Scaleplan\Helpers\get_env;
  */
 class Daemon
 {
-    public const OPERATION_START = 'start';
+    public const OPERATION_START   = 'start';
     public const OPERATION_RESTART = 'restart';
-    public const OPERATION_STOP = 'stop';
+    public const OPERATION_STOP    = 'stop';
 
     public const STOP_SIGNALS = [
         SIGTERM,
@@ -55,23 +58,14 @@ class Daemon
     protected $withMonit = false;
 
     /**
-     * Stop signal handler
+     * @var int
      */
-    protected function stopSignalHandler() : void
-    {
-        $this->logger->info("Daemon {$this->commandName} was stopped.");
-        exit(0);
-    }
+    protected $timeout = 5;
 
     /**
-     * Stop signal listening initialization
+     * @var int
      */
-    protected function stopSignalHandlerInit() : void
-    {
-        foreach (static::STOP_SIGNALS as $signal) {
-            pcntl_signal($signal, [$this, 'stopSignalHandler']);
-        }
-    }
+    protected $restartAfter = 86400;
 
     /**
      * Daemon constructor.
@@ -91,6 +85,57 @@ class Daemon
 
         pcntl_async_signals(false);
         $this->stopSignalHandlerInit();
+    }
+
+    /**
+     * @return int
+     */
+    public function getTimeout() : int
+    {
+        return $this->timeout;
+    }
+
+    /**
+     * @param int $timeout
+     */
+    public function setTimeout(int $timeout) : void
+    {
+        $this->timeout = $timeout;
+    }
+
+    /**
+     * @return int
+     */
+    public function getRestartAfter() : int
+    {
+        return $this->restartAfter;
+    }
+
+    /**
+     * @param int $restartAfter
+     */
+    public function setRestartAfter(int $restartAfter) : void
+    {
+        $this->restartAfter = $restartAfter;
+    }
+
+    /**
+     * Stop signal handler
+     */
+    protected function stopSignalHandler() : void
+    {
+        $this->logger->info("Daemon {$this->commandName} was stopped.");
+        exit(0);
+    }
+
+    /**
+     * Stop signal listening initialization
+     */
+    protected function stopSignalHandlerInit() : void
+    {
+        foreach (static::STOP_SIGNALS as $signal) {
+            pcntl_signal($signal, [$this, 'stopSignalHandler']);
+        }
     }
 
     /**
@@ -123,25 +168,59 @@ class Daemon
      * @throws \Scaleplan\Console\Exceptions\CommandClassNotInstantiableException
      * @throws \Scaleplan\Console\Exceptions\CommandException
      * @throws \Scaleplan\Console\Exceptions\InvalidCommandSignatureException
+     * @throws \Scaleplan\Event\Exceptions\ClassNotImplementsEventInterfaceException
      */
     public function start(array $args = null) : void
     {
+        $this->logger->info("Starting daemon command {$this->commandName}...");
         $command = CommandFabric::getCommand($this->commandName, array_values($args));
         $this->startArgs = $args ?? $this->startArgs;
         if ($this->withMonit) {
             $this->monit->saveFile();
         }
 
-        $this->logger->info("Daemon {$this->commandName} running...");
+        if ($command::DAEMON_TIMEOUT) {
+            $this->timeout = $command::DAEMON_TIMEOUT;
+        }
+
+        if ($command::DAEMON_RESTART_AFTER) {
+            $this->restartAfter = $command::DAEMON_RESTART_AFTER;
+        }
+
+        $this->loop($command);
+    }
+
+    /**
+     * @param CommandInterface $command
+     *
+     * @throws \Scaleplan\Event\Exceptions\ClassNotImplementsEventInterfaceException
+     */
+    protected function loop(CommandInterface $command) : void
+    {
+        $this->logger->info("Daemon command {$this->commandName} running...");
+        $startTime = \time();
         while (true) {
             try {
                 $command->run();
-                $timeout = \constant("$command::DAEMON_TIMEOUT")
-                    ?? get_env('DAEMON_TIMEOUT')
-                    ?? AbstractCommand::DAEMON_TIMEOUT;
                 pcntl_signal_dispatch();
-                usleep($timeout);
+                if ($startTime + $this->restartAfter >= \time()) {
+                    $this->restart();
+                }
+
+                sleep($this->timeout);
             } catch (\Throwable $e) {
+                if ($e instanceof CriticalException) {
+                    $this->stop();
+                    dispatch(CriticalErrorEvent::class);
+                    $this->logger->critical($e->getMessage());
+                    exit();
+                }
+
+                if ($e instanceof ErrorException) {
+                    dispatch(ErrorEvent::class);
+                    $this->restart();
+                }
+
                 $this->logger->error($e->getMessage());
             }
         }
@@ -161,21 +240,14 @@ class Daemon
         $this->logger->info("Sending stop signal to daemon {$this->commandName}...");
     }
 
-    /**
-     * @throws \Scaleplan\Console\Exceptions\CommandClassNotFoundException
-     * @throws \Scaleplan\Console\Exceptions\CommandClassNotImplementsCommandInterfaceException
-     * @throws \Scaleplan\Console\Exceptions\CommandClassNotInstantiableException
-     * @throws \Scaleplan\Console\Exceptions\CommandException
-     * @throws \Scaleplan\Console\Exceptions\InvalidCommandSignatureException
-     */
     public function restart() : void
     {
-        $oldWithMonit = $this->withMonit;
+        //$oldWithMonit = $this->withMonit;
         $this->withMonit = false;
-        $this->start();
         $this->stop();
-        $this->start();
-        $this->withMonit = $oldWithMonit;
+        shell_exec("{$_SERVER['SCRIPT_FILENAME']} start {$this->commandName} " . implode(' ', $this->getStartArgs()));
+        //$this->start();
+        //$this->withMonit = $oldWithMonit;
     }
 
     /**
@@ -203,6 +275,7 @@ class Daemon
      * @throws \Scaleplan\Console\Exceptions\CommandClassNotInstantiableException
      * @throws \Scaleplan\Console\Exceptions\CommandException
      * @throws \Scaleplan\Console\Exceptions\InvalidCommandSignatureException
+     * @throws \Scaleplan\Event\Exceptions\ClassNotImplementsEventInterfaceException
      */
     public function exec(string $operation) : void
     {
