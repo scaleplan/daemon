@@ -17,7 +17,7 @@ use function Scaleplan\Event\dispatch;
  *
  * @package Scaleplan\Daemon
  */
-class Daemon
+class Daemon implements DaemonInterface
 {
     public const OPERATION_START   = 'start';
     public const OPERATION_RESTART = 'restart';
@@ -240,6 +240,9 @@ class Daemon
         $this->logger->info("Sending stop signal to daemon {$this->commandName}...");
     }
 
+    /**
+     * Restart daemon process
+     */
     public function restart() : void
     {
         //$oldWithMonit = $this->withMonit;
