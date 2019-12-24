@@ -28,6 +28,6 @@ try {
     $daemon->setStartArgs(array_values($argv));
 
     $daemon->exec($operation);
-} catch (\Throwable $e) {
+} catch (Throwable $e) {
     echo $e->getMessage();
 }
