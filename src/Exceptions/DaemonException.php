@@ -9,7 +9,7 @@ namespace Scaleplan\Daemon\Exceptions;
  */
 class DaemonException extends \Exception
 {
-    public const MESSAGE = 'Daemon error.';
+    public const MESSAGE = 'Ошибка работы демона.';
     public const CODE = 406;
 
     /**

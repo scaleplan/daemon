@@ -9,6 +9,6 @@ namespace Scaleplan\Daemon\Exceptions;
  */
 class CriticalException extends DaemonException
 {
-    public const MESSAGE = 'Daemon critical error.';
+    public const MESSAGE = 'Критическая ошибка работы демона.';
     public const CODE = 500;
 }
