@@ -9,6 +9,6 @@ namespace Scaleplan\Daemon\Exceptions;
  */
 class DaemonOperationNotSupportedException extends DaemonException
 {
-    public const MESSAGE = 'Неподдерживаемая операция для демона.';
+    public const MESSAGE = 'daemon.not-supporting-operation';
     public const CODE = 406;
 }

@@ -1,0 +1,4 @@
+critical-error: Daemon critical error.
+deamon-run-error: Daemon error.
+not-supporting-operation: Non-supported operation.
+error-with-reload: Deamon error. Restart...

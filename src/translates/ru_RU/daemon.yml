@@ -1,0 +1,4 @@
+critical-error: Критическая ошибка работы демона.
+daemon-run-error: Ошибка работы демона.
+not-supporting-operation: Неподдерживаемая операция для демона.
+error-with-reload: Ошибка работы демона. Перезапуск...

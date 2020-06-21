@@ -9,6 +9,6 @@ namespace Scaleplan\Daemon\Exceptions;
  */
 class ErrorException extends DaemonException
 {
-    public const MESSAGE = 'Ошибка работы демона. Перезапуск...';
+    public const MESSAGE = 'daemon.error-with-reload';
     public const CODE = 500;
 }
